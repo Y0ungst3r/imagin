@@ -4,7 +4,7 @@ import datetime
 import math
 import serial
 import socket
-
+import DBWriter
 from sht85 import SHT85
 from interlock.Interlock import Interlock
 from relayboard.RelayBoard import RelayBoard
@@ -14,14 +14,17 @@ rep = 'HIGH' # Repeatability: HIGH, MEDIUM, LOW
 #print ('serial number = ', sht85.sn())
 time.sleep(0.5e-3)
 
-s = socket.socket()
-TCP_IP = '192.168.0.216'
-TCP_PORT = 12399
-BUFFER_SIZE = 1024
-#s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((TCP_IP, TCP_PORT))
-s.listen(1)
-c,addr = s.accept()
+# s = socket.socket()
+# TCP_IP = '192.168.0.216'
+# TCP_PORT = 12399
+# BUFFER_SIZE = 1024
+# #s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# s.bind((TCP_IP, TCP_PORT))
+# s.listen(1)
+# c,addr = s.accept()
+
+c = DBWriter.db_client
+
 
 Interlock.reset_alarms()
 
@@ -43,15 +46,25 @@ afterfail_stable = 0
 switchon_ps_once = 0
 #Interlock.set_gled()
 time.sleep(1)
+data_dict = {}
 try:
     while True:
         t,rh, dp = Interlock.read_sht85value()
+        data_dict["Box_temp"] = t
+        data_dict["Box_Rel_Hum"] = rh
+        data_dict["Box_Dew"] = dp
+
         tchuck = Interlock.read_tempchuck()
         tmodule = Interlock.read_tempmodule()
         slid, svacuum, spressure = Interlock.read_switches()
         tevent = datetime.datetime.now().strftime("%y/%m/%d-%H:%M:%S") 
         #Interlock.powerON_peltier()
         #Interlock.enable_lv() # DY - bypass for source scan
+        data_dict["Chuck_temp"] = tchuck
+        data_dict["Module_temp"] = tmodule
+        data_dict["Box_lid"] = slid
+        data_dict["Box_vac"] = svacuum
+        data_dict["Box_pressure"] = spressure
 
         # IsOkay will store 1 only if truly all condition are satisfied
         if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and abs(rh-0)<2 and tmodule<45:
@@ -112,9 +125,20 @@ try:
             Interlock.set_yled()
             Interlock.set_gled(1)
 
+
+        fields = {
+            **data_dict
+        }
+        outdata_json = [{
+            "measurement": "module-reception-03",
+            "tags": {"location" : "lab"},
+            "time": datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "fields": fields
+        }]
         outdata = f"{tevent}\t{t}\t{rh}\t{dp}\t{tchuck}\t{tmodule}\t{slid}\t{svacuum}\t{spressure}\t{IsOkay}\n"
         print(outdata)
-        c.send(''.join(outdata).encode('utf-8'))
+        c.write_points(outdata_json)
+        # c.send(''.join(outdata).encode('utf-8'))
         #c.close()
 
         fInterlock=open(fname_IntState, "a+")
