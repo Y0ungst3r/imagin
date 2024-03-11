@@ -15,7 +15,7 @@ rep = 'HIGH' # Repeatability: HIGH, MEDIUM, LOW
 time.sleep(0.5e-3)
 
 s = socket.socket()
-TCP_IP = '192.168.0.213'
+TCP_IP = '192.168.0.216'
 TCP_PORT = 12399
 BUFFER_SIZE = 1024
 #s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -54,10 +54,10 @@ try:
         #Interlock.enable_lv() # DY - bypass for source scan
 
         # IsOkay will store 1 only if truly all condition are satisfied
-        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and abs(rh-0)<2 and tmodule<45:
+        if slid == 1 and svacuum == 1 and abs(tchuck)<60 and tmodule<45:
             IsOkay=1
             
-        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and abs(rh-0)<2 and tmodule<45 and IsOkay:
+        if slid == 1 and svacuum == 1 and abs(tchuck)<60 and tmodule<45 and IsOkay:
             Interlock.set_gled()
             count_stable += 1
             if count_fails > 0:

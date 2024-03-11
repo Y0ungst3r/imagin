@@ -3,8 +3,9 @@ from time import sleep
 
 import argparse
 parser = argparse.ArgumentParser(description = "")
-parser.add_argument('--flyingtime', '-t', help='time in second', action='store', default='10')
-args = parser.parse_args()
+
+#parser.add_argument('--flyingtime', '-t', help='time in second', action='store', default='10')
+args = parser.parser_args()
 
 '''
 motor pins
@@ -178,8 +179,8 @@ stepperHandler = StepperMotor(0.001)
 stepperHandler.get_ready()
 # Go forwards once
 #stepperHandler.Step(100)
-stepperHandler.step(ENABLE_PIN, STEP_PIN, DIRECTION_PIN, 975, stepperHandler.ANTI_CLOCKWISE)
-stepperHandler.step(23, 24, 25, 6000, stepperHandler.ANTI_CLOCKWISE)
+stepperHandler.step(ENABLE_PIN, STEP_PIN, DIRECTION_PIN, 900, stepperHandler.ANTI_CLOCKWISE)
+stepperHandler.step(23, 24, 25, 2000, stepperHandler.ANTI_CLOCKWISE)
 sleep(float(args.flyingtime))
 stepperHandler.set_parking()
 # Go backwards once

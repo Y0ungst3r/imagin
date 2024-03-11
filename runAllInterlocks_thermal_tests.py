@@ -20,10 +20,31 @@ TCP_PORT = 12399
 BUFFER_SIZE = 1024
 #s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((TCP_IP, TCP_PORT))
+print("Wating for ControlInterlock socket to connect")
 s.listen(1)
+
+
 c,addr = s.accept()
 
+
 Interlock.reset_alarms()
+
+
+### add new socket to control the peltier polarity
+s_temp = socket.socket()
+TCP_TEMP_PORT = 12400
+s_temp.bind((TCP_IP,TCP_TEMP_PORT))
+print("Wating for ThermalCycling socket to connect")
+s_temp.listen(1)  # will wait for connection from new script in the computer
+c_temp,addr_temp = s_temp.accept()
+
+
+# peltier polarity 0 gor heating 1 for cooling
+peltier_polarity = 1
+temp_test_finish = 0
+
+
+
 
 fname_IntState = time.strftime("interlock_data/InterlockStatusData_%Y%m%d%H%M%S.txt")
 fInterlock=open(fname_IntState, "a+")
@@ -43,21 +64,38 @@ afterfail_stable = 0
 switchon_ps_once = 0
 #Interlock.set_gled()
 time.sleep(1)
+
+
+
+
+
 try:
     while True:
         t,rh, dp = Interlock.read_sht85value()
         tchuck = Interlock.read_tempchuck()
         tmodule = Interlock.read_tempmodule()
         slid, svacuum, spressure = Interlock.read_switches()
-        tevent = datetime.datetime.now().strftime("%y/%m/%d-%H:%M:%S") 
+        tevent = datetime.datetime.now().strftime("%y/%m/%d-%H:%M:%S")
         #Interlock.powerON_peltier()
         #Interlock.enable_lv() # DY - bypass for source scan
 
         # IsOkay will store 1 only if truly all condition are satisfied
-        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and abs(rh-0)<2 and tmodule<45:
+        #if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<70 and abs(rh-0)<2 and tmodule<70: # changed limits to 70
+        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<70 and tmodule<70: # changed limits to 70
             IsOkay=1
+        #if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<70 and abs(rh-0)<2 and tmodule<70 and IsOkay: # changed limits to 70
+            temp_out = f"{tmodule}\t{tchuck}\t{rh}\t{dp}\t{t}"
+            c_temp.send(temp_out.encode())
+
+            temp_msg = c_temp.recv(BUFFER_SIZE).decode() # in the server side the connection receives, not the socket
+
+            peltier_polarity = int(temp_msg.split()[0])
+            temp_test_finish = int(temp_msg.split()[1])
             
-        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and abs(rh-0)<2 and tmodule<45 and IsOkay:
+            if temp_test_finish:
+                break
+            print("Peltier polarity set to: {}".format(peltier_polarity))
+            Interlock.switch_peltier(peltier_polarity) # change polarity right after receiving it
             Interlock.set_gled()
             count_stable += 1
             if count_fails > 0:
@@ -65,7 +103,7 @@ try:
             if count_fails > 10:
                 Interlock.set_yled()
             if switchon_ps_once == 0 and count_stable > 20: # Now, we are ready to turn on the all instruments
-                Interlock.switch_peltier(1)   # 0 for heating (default) and 1 for cooling 
+                Interlock.switch_peltier(peltier_polarity)   # 0 for heating (default) and 1 for cooling 
                 Interlock.powerON_peltier()
                 Interlock.enable_lv()
                 Interlock.enable_hv()
@@ -74,7 +112,8 @@ try:
                 #Interlock.switch_peltier()
 
         elif count_stable>20:
-            if slid == 0 or svacuum == 0 or spressure == 0 or abs(tchuck)>60 or abs(rh-0)>2 or tmodule>45:
+            #if slid == 0 or svacuum == 0 or spressure == 0 or abs(tchuck)>60 or abs(rh-0)>2 or tmodule>65: # changed limit from 45 to 65
+            if slid == 0 or svacuum == 0 or spressure == 0 or abs(tchuck)>60  or tmodule>65: # changed limit from 45 to 65
                 interlockTriggerThreshold = 2
                 count_fails += 1
                 if count_fails <= interlockTriggerThreshold: # if IsOkay condition fails one or two times in series

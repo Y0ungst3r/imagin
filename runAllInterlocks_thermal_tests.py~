@@ -15,7 +15,7 @@ rep = 'HIGH' # Repeatability: HIGH, MEDIUM, LOW
 time.sleep(0.5e-3)
 
 s = socket.socket()
-TCP_IP = '192.168.0.213'
+TCP_IP = '192.168.0.216'
 TCP_PORT = 12399
 BUFFER_SIZE = 1024
 #s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
