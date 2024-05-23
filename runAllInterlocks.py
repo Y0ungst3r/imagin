@@ -67,10 +67,10 @@ try:
         data_dict["Box_pressure"] = spressure
 
         # IsOkay will store 1 only if truly all condition are satisfied
-        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and abs(rh-0)<2 and tmodule<45:
+        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and tchuck-dp>5 and tmodule<45:
             IsOkay=1
             
-        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and abs(rh-0)<2 and tmodule<45 and IsOkay:
+        if slid == 1 and svacuum == 1 and spressure == 1 and abs(tchuck)<60 and tchuck-dp>5 and tmodule<45 and IsOkay:
             Interlock.set_gled()
             count_stable += 1
             if count_fails > 0:
@@ -87,7 +87,7 @@ try:
                 #Interlock.switch_peltier()
 
         elif count_stable>20:
-            if slid == 0 or svacuum == 0 or spressure == 0 or abs(tchuck)>60 or abs(rh-0)>2 or tmodule>45:
+            if slid == 0 or svacuum == 0 or spressure == 0 or abs(tchuck)>60 or thchuck-dp>5 or tmodule>45:
                 interlockTriggerThreshold = 2
                 count_fails += 1
                 if count_fails <= interlockTriggerThreshold: # if IsOkay condition fails one or two times in series
